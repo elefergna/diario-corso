@@ -78,6 +78,9 @@ function closure(d){return cfg().closures.find(c=>c.a<=d&&d<=c.b)}
 function hoursOn(d){if(closure(d))return 0;return +cfg().weekly[pd(d).getDay()]||0}
 function lessons(){const c=cfg(),r=[];for(let x=pd(c.start),e=pd(c.end);x<=e;x.setDate(x.getDate()+1)){const d=ds(x),h=hoursOn(d);if(h)r.push({d,h})}return r}
 function topics(){return cfg().modules.flatMap(m=>m.t.map(t=>({...t,m:m.n})))}
+const em=e=>e.mn!=null?+e.mn:Math.round((+e.h||0)*60);
+const fm=m=>{m=Math.round(m);const h=Math.floor(m/60),r=m%60;return h&&r?h+' h '+r+' min':h?h+' h':r+' min'};
+const fs=d=>{const x=pd(d);return GI[x.getDay()].slice(0,3)+' '+x.getDate()+' '+MESI[x.getMonth()].slice(0,3)};
 const tname=id=>(topics().find(t=>t.id===id)||{n:''}).n;
 function entriesOn(d){return Object.entries(S.entries).filter(([,e])=>e.date===d).map(([id,e])=>({id,...e}))}
 function fmt(d){const x=pd(d);return GI[x.getDay()]+' '+x.getDate()+' '+MESI[x.getMonth()]+' '+x.getFullYear()}
@@ -145,22 +148,22 @@ async function init(){
 const TABS=[['piano','Piano'],['calendario','Calendario'],['nota','Nota veloce'],['diario','Diario'],['classe','Classe'],['difficolta','Difficoltà'],['dati','Dati'],['sync','Sincronia']];
 function route(){const h=location.hash.slice(1)||'piano';if(h.startsWith('giorno-'))return{v:'giorno',d:h.slice(7)};return{v:h}}
 function bar(done,plan,tot,mark){const p=x=>Math.min(100,tot?x/tot*100:0);return`<div class="bar"><i style="width:${p(done)}%"></i>${mark!=null?`<b style="left:${p(mark)}%"></b>`:''}</div>`}
-function sums(){const f={},p={};for(const e of Object.values(S.entries)){const m=e.s==='f'?f:p;m[e.u||'']=(m[e.u||'']||0)+(+e.h||0)}return{f,p}}
+function sums(){const f={},p={};for(const e of Object.values(S.entries)){const m=e.s==='f'?f:p;m[e.u||'']=(m[e.u||'']||0)+em(e)}return{f,p}}
 function vPiano(){
- const L=lessons(),tot=L.reduce((a,l)=>a+l.h,0),t0=today(),el=L.filter(l=>l.d<=t0).reduce((a,l)=>a+l.h,0),{f,p}=sums();
- const done=Object.values(f).reduce((a,b)=>a+b,0),target=cfg().modules.reduce((a,m)=>a+m.h,0);
- let h=`<div class="c"><div class="row sp"><h2>Corso: ${target} ore</h2><span class="mu">${L.length} lezioni · ${tot} ore in calendario</span></div>
- <p class="mu" style="margin:0 0 8px">Fatte (registrate) ${done} h · ore di lezione trascorse a oggi ${el} h · la linea arancione è dove dovresti essere.</p>${bar(done,0,tot,el)}
- ${tot!==target?`<p class="mu" style="color:var(--wa)">Attenzione: il calendario dà ${tot} ore, il corso ne prevede ${target}. Controlla Dati.</p>`:''}</div>`;
+ const L=lessons(),tot=L.reduce((a,l)=>a+l.h*60,0),t0=today(),el=L.filter(l=>l.d<=t0).reduce((a,l)=>a+l.h*60,0),{f,p}=sums();
+ const done=Object.values(f).reduce((a,b)=>a+b,0),target=cfg().modules.reduce((a,m)=>a+m.h*60,0);
+ let h=`<div class="c"><div class="row sp"><h2>Corso: ${fm(target)}</h2><span class="mu">${L.length} lezioni · ${fm(tot)} in calendario</span></div>
+ <p class="mu" style="margin:0 0 8px">Fatte (registrate) ${fm(done)} · lezione trascorsa a oggi ${fm(el)} · la linea arancione è dove dovresti essere.</p>${bar(done,0,tot,el)}
+ ${tot!==target?`<p class="mu" style="color:var(--wa)">Attenzione: il calendario dà ${fm(tot)}, il corso ne prevede ${fm(target)}. Controlla Dati.</p>`:''}</div>`;
  for(const m of cfg().modules){
-  const md=m.t.reduce((a,t)=>a+(f[t.id]||0),0),sum=m.t.reduce((a,t)=>a+t.h,0);
-  h+=`<div class="c"><div class="row sp"><h3>${esc(m.n)}</h3><span class="mu">${md} / ${m.h} h</span></div><div style="margin:8px 0">${bar(md,0,m.h)}</div>
-  ${sum!==m.h?`<p class="mu" style="color:var(--wa);margin:0 0 6px">Gli argomenti sommano ${sum} h su ${m.h}.</p>`:''}`;
+  const md=m.t.reduce((a,t)=>a+(f[t.id]||0),0),sum=m.t.reduce((a,t)=>a+t.h,0)*60,mt=m.h*60;
+  h+=`<div class="c"><div class="row sp"><h3>${esc(m.n)}</h3><span class="mu">${fm(md)} / ${fm(mt)}</span></div><div style="margin:8px 0">${bar(md,0,mt)}</div>
+  ${sum!==mt?`<p class="mu" style="color:var(--wa);margin:0 0 6px">Gli argomenti sommano ${fm(sum)} su ${fm(mt)}.</p>`:''}`;
   for(const t of m.t){const a=f[t.id]||0,b=p[t.id]||0;
    h+=`<div style="padding:9px 0;border-top:1px solid var(--bd)"><div class="row sp"><span>${esc(t.n)}</span>
-   <span class="row" style="gap:5px"><span class="mu">${a}${b?` (+${b} previste)`:''} /</span><input type="number" step="0.5" min="0" value="${t.h}" data-th="${t.id}" style="width:64px;padding:4px 6px"><span class="mu">h</span></span></div>${bar(a,0,t.h)}</div>`}
+   <span class="row" style="gap:5px"><span class="mu">${fm(a)}${b?` (+${fm(b)} previste)`:''} /</span><input type="number" step="0.25" min="0" value="${t.h}" data-th="${t.id}" style="width:70px;padding:4px 6px"><span class="mu">h</span></span></div>${bar(a,0,t.h*60)}</div>`}
   h+='</div>'}
- const un=(f['']||0)+(p['']||0);if(un)h+=`<p class="mu">${un} h di voci senza argomento assegnato.</p>`;
+ const un=(f['']||0)+(p['']||0);if(un)h+=`<p class="mu">${fm(un)} di voci senza argomento assegnato.</p>`;
  return h}
 function vCal(){
  if(!month){const d=pd(today()),s=pd(cfg().start);month=ds(d>=s&&d<=pd(cfg().end)?d:s).slice(0,7)}
@@ -176,20 +179,22 @@ function vCal(){
 function topicSelect(v){return`<select name="u"><option value="">— nessun argomento —</option>${cfg().modules.map(m=>`<optgroup label="${esc(m.n)}">${m.t.map(t=>`<option value="${t.id}" ${t.id===v?'selected':''}>${esc(t.n)}</option>`).join('')}</optgroup>`).join('')}</select>`}
 function entryForm(d,showDate){
  const e=edit.entry&&S.entries[edit.entry]?{id:edit.entry,...S.entries[edit.entry]}:null;
- const used=entriesOn(d).filter(x=>!e||x.id!==e.id).reduce((a,x)=>a+(+x.h||0),0),def=e?e.h:Math.max(0,hoursOn(d)-used)||'';
+ const used=entriesOn(d).filter(x=>!e||x.id!==e.id).reduce((a,x)=>a+em(x),0),def=e?em(e):Math.max(0,hoursOn(d)*60-used)||'';
  return`<form class="c" data-f="entry"><h2>${e?'Modifica voce':'Nuova voce'}</h2><input type="hidden" name="id" value="${e?e.id:''}">
  ${showDate?`<label>Data</label><input type="date" name="date" value="${e?e.date:d}" required>`:`<input type="hidden" name="date" value="${d}">`}
  <label>Argomento</label>${topicSelect(e?e.u:'')}
- <div class="g2"><div><label>Ore</label><input type="number" step="0.5" min="0" name="h" value="${def}"></div>
- <div><label>Stato</label><select name="s"><option value="p" ${e&&e.s==='p'?'selected':''}>Da fare</option><option value="f" ${!e||e.s==='f'?'selected':''}>Fatto</option></select></div></div>
+ <div class="g2"><div><label>Minuti</label><input type="number" step="1" min="0" name="mn" value="${def}" inputmode="numeric"><div class="row" style="margin-top:6px;gap:5px">${[15,30,45,60,90,120].map(m=>`<button type="button" class="s" data-a="qm" data-v="${m}">${m}</button>`).join('')}</div></div>
+ <div><label>Stato</label><select name="s"><option value="p" ${!e||e.s==='p'?'selected':''}>Da fare</option><option value="f" ${e&&e.s==='f'?'selected':''}>Fatto</option></select></div></div>
  <label>Cosa si fa / cosa è stato fatto</label><textarea name="t" placeholder="Scrivi o detta qui…">${esc(e?e.t:'')}</textarea>
  <label>Materiali (schede, giochi, link)</label><input name="m" value="${esc(e?e.m:'')}">
  <label>Colore</label><select name="k">${KN.map((n,i)=>`<option value="${i}" ${(e?+e.k:0)===i?'selected':''}>${n}</option>`).join('')}</select>
  <div class="row" style="margin-top:12px"><button class="p">${e?'Salva modifiche':'Aggiungi'}</button>${e?'<button type="button" data-a="ce">Annulla</button>':''}</div>
  <p class="mu" style="margin:10px 0 0">Per dettare: tocca il microfono sulla tastiera del telefono. In auto, registra con l’app Memo vocali o Registratore (trascrive da sola) e incolla qui il testo.</p></form>`}
 function entryCard(e,link){const k=+e.k||0;
- return`<div class="c en" style="border-left-color:${k?KC[k]:'var(--bd)'}"><div class="row sp"><span><span class="pill ${e.s==='f'?'':'p'}">${e.s==='f'?'Fatto':'Da fare'}</span> ${e.h?`<span class="mu">${e.h} h</span>`:''}</span>
+ return`<div class="c en" style="border-left-color:${k?KC[k]:'var(--bd)'}"><div class="row sp"><span><span class="pill ${e.s==='f'?'':'p'}">${e.s==='f'?'Fatto':'Da fare'}</span> ${em(e)?`<span class="mu">${fm(em(e))}</span>`:''}</span>
  <span class="row" style="gap:5px">${link?`<button class="s" data-a="go" data-d="${e.date}">Apri giorno</button>`:''}<button class="s" data-a="ee" data-id="${e.id}" data-d="${e.date}">Modifica</button><button class="s d" data-a="de" data-id="${e.id}">Elimina</button></span></div>
+ <div class="row" style="margin-top:8px">${e.s==='f'?`<button class="s" data-a="sp" data-id="${e.id}">Rimetti da fare</button>`:`<button class="s p" data-a="sf" data-id="${e.id}">Segna come fatta</button>`}<button class="s" data-a="mv" data-id="${e.id}">Cambia giorno</button></div>
+ ${edit.mv===e.id?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)"><label>Sposta a una lezione</label><select data-mvsel><option value="">— scegli una lezione —</option>${lessons().map(l=>`<option value="${l.d}">${fs(l.d)} (${l.h} h)${l.d===e.date?' · giorno attuale':''}</option>`).join('')}</select><label>…oppure un’altra data</label><input type="date" data-mvdate><div class="row" style="margin-top:10px"><button class="s p" data-a="mvok" data-id="${e.id}">Sposta</button><button class="s" data-a="mvx">Annulla</button></div></div>`:''}
  ${link?`<div class="mu" style="margin-top:4px">${fmt(e.date)}</div>`:''}
  ${e.u?`<div style="margin-top:4px;font-weight:600">${esc(tname(e.u))}</div>`:''}
  ${e.t?`<div style="margin-top:4px;white-space:pre-wrap">${esc(e.t)}</div>`:''}${e.m?`<div class="mu" style="margin-top:4px">Materiali: ${esc(e.m)}</div>`:''}</div>`}
@@ -198,7 +203,7 @@ function vDay(d){
  const hr=hoursOn(d),cl=closure(d),es=entriesOn(d).sort((a,b)=>(a.s>b.s?-1:1));
  const L=lessons(),i=L.findIndex(l=>l.d>=d),pr=[...L].reverse().find(l=>l.d<d),nx=L.find(l=>l.d>d);
  return`<div class="row sp" style="margin-bottom:8px"><a class="btn" href="#calendario">‹ Calendario</a><span class="row" style="gap:6px">${pr?`<a class="btn" href="#giorno-${pr.d}">‹ Lezione prec.</a>`:''}${nx?`<a class="btn" href="#giorno-${nx.d}">Lezione succ. ›</a>`:''}</span></div>
- <div class="c"><h2 style="margin:0;text-transform:capitalize">${fmt(d)}</h2><p class="mu" style="margin:4px 0 0">${hr?`Lezione di ${hr} ore`:cl?esc(cl.l):'Nessuna lezione in calendario'}${d===today()?' · oggi':''}</p></div>
+ <div class="c"><h2 style="margin:0;text-transform:capitalize">${fmt(d)}</h2><p class="mu" style="margin:4px 0 0">${hr?`Lezione di ${hr} ore`:cl?esc(cl.l):'Nessuna lezione in calendario'}${d===today()?' · oggi':''}${es.length?` · in programma ${fm(es.reduce((a,x)=>a+em(x),0))}`:''}</p></div>
  ${es.map(e=>entryCard(e,false)).join('')||'<p class="mu">Ancora nessuna voce per questo giorno.</p>'}${entryForm(d,false)}`}
 function vNota(){const L=lessons(),t0=today(),sug=(L.find(l=>l.d>=t0)||L[L.length-1]||{d:t0}).d,pr=[...L].reverse().find(l=>l.d<=t0);
  const d=edit.nd||(pr?pr.d:sug);
@@ -244,6 +249,11 @@ document.addEventListener('click',async ev=>{
  else if(a==='mm'){const[y,m]=month.split('-').map(Number),x=new Date(y,m-1+ +el.dataset.v,1);month=ds(x).slice(0,7);render()}
  else if(a==='mt'){month=today().slice(0,7);render()}
  else if(a==='ee'){edit.entry=id;if(route().v==='giorno')render();else{edit.nd=el.dataset.d;location.hash='nota';edit.entry=id;render()}}
+ else if(a==='qm'){el.closest('form').querySelector('[name=mn]').value=el.dataset.v}
+ else if(a==='sf'||a==='sp'){const x=S.entries[id];if(x){await put('entries',id,{...x,s:a==='sf'?'f':'p'});toast(a==='sf'?'Segnata come fatta':'Rimessa da fare')}}
+ else if(a==='mv'){edit.mv=edit.mv===id?null:id;render()}
+ else if(a==='mvx'){edit.mv=null;render()}
+ else if(a==='mvok'){const bx=el.parentElement.parentElement,nd=bx.querySelector('[data-mvdate]').value||bx.querySelector('[data-mvsel]').value,x=S.entries[id];if(!nd)return toast('Scegli prima una data');if(x){edit.mv=null;await put('entries',id,{...x,date:nd});toast('Spostata a '+fmt(nd))}}
  else if(a==='ce'){edit.entry=null;render()}
  else if(a==='de')arm('de'+id,()=>del('entries',id));
  else if(a==='es'){edit.st=id;render();scrollTo(0,0)}else if(a==='cs'){edit.st=null;render()}
@@ -262,7 +272,7 @@ document.addEventListener('change',async ev=>{const t=ev.target;
  else if(t.dataset.th){const c=JSON.parse(JSON.stringify(cfg()));c.modules.forEach(m=>m.t.forEach(x=>{if(x.id===t.dataset.th)x.h=+t.value||0}));await put('config','',c)}});
 document.addEventListener('submit',async ev=>{
  const f=ev.target.closest('form[data-f]');if(!f)return;ev.preventDefault();const k=f.dataset.f,v=Object.fromEntries(new FormData(f));
- if(k==='entry'){const id=v.id||uid();if(await put('entries',id,{date:v.date,u:v.u,h:+v.h||0,s:v.s,t:v.t.trim(),m:v.m.trim(),k:+v.k||0})){edit.entry=null;toast('Salvato');if(route().v==='nota'){edit.nd=v.date;location.hash='giorno-'+v.date}else render()}}
+ if(k==='entry'){const id=v.id||uid();if(await put('entries',id,{date:v.date,u:v.u,mn:Math.max(0,Math.round(+v.mn)||0),s:v.s,t:v.t.trim(),m:v.m.trim(),k:+v.k||0})){edit.entry=null;toast('Salvato');if(route().v==='nota'){edit.nd=v.date;location.hash='giorno-'+v.date}else render()}}
  else if(k==='st'){const id=v.id||uid();if(await put('students',id,{n:v.n.trim(),l:+v.l,o:v.o.trim()})){edit.st=null;toast('Salvato');render()}}
  else if(k==='df'){if(await put('diff',uid(),{u:v.u,t:v.t.trim(),d:v.d,r:false}))toast('Aggiunto')}
  else if(k==='sync'){G={owner:v.owner.trim(),repo:v.repo.trim().replace(/^.*\//,''),token:v.token.trim()||G.token,path:(v.path.trim()||'diario.json').replace(/^\//,''),branch:v.branch.trim()};try{localStorage.setItem(CK,JSON.stringify(G))}catch(e){}sha=null;toast('Collego…');await refresh();render()}
@@ -274,7 +284,7 @@ async function importOld(){
  const raw=($('[data-imp]').value||'').trim();if(!raw)return toast('Incolla prima la stringa');
  let o;try{o=JSON.parse(raw)}catch(e){try{o=JSON.parse(decodeURIComponent(escape(atob(raw))))}catch(e2){return toast('Stringa non riconosciuta')}}
  const un={};(o.units||[]).forEach(u=>un[u.id]=u.n);const items=[];
- for(const x of o.log||[])if(x.d)items.push(['entries',uid(),{date:x.d,u:'',h:+x.h||0,s:x.s==='p'?'p':'f',t:(un[x.u]?'['+un[x.u]+'] ':'')+(x.t||''),m:x.m||'',k:+x.k||0}]);
+ for(const x of o.log||[])if(x.d)items.push(['entries',uid(),{date:x.d,u:'',mn:Math.round((+x.h||0)*60),s:x.s==='p'?'p':'f',t:(un[x.u]?'['+un[x.u]+'] ':'')+(x.t||''),m:x.m||'',k:+x.k||0}]);
  for(const x of o.st||[])items.push(['students',uid(),{n:x.n||'',l:+x.l||0,o:x.o||''}]);
  for(const x of o.df||[])items.push(['diff',uid(),{u:'',t:(un[x.u]?'['+un[x.u]+'] ':'')+(x.t||''),d:x.d||today(),r:!!x.r}]);
  await apply(()=>items.forEach(([c,id,v])=>S[c][id]=v));toast('Importati '+items.length+' elementi');
