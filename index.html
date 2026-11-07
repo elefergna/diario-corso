@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#2f6f62">
+<title>Diario corso pre-A1</title>
+<style>
+:root{--bg:#faf8f4;--card:#fff;--tx:#2a2622;--mu:#7a7268;--ac:#2f6f62;--acs:#e3efeb;--bd:#e4ded3;--wa:#b4531f;--ok:#2f6f62}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1b19;--card:#262421;--tx:#ece7df;--mu:#a39b8f;--ac:#6fc2b0;--acs:#27403a;--bd:#3a3733;--wa:#e8895a;--ok:#6fc2b0}}
+:root[data-theme="dark"]{--bg:#1c1b19;--card:#262421;--tx:#ece7df;--mu:#a39b8f;--ac:#6fc2b0;--acs:#27403a;--bd:#3a3733;--wa:#e8895a;--ok:#6fc2b0}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;padding:0 max(16px,env(safe-area-inset-right)) 80px max(16px,env(safe-area-inset-left))}
+#w{max-width:860px;margin:0 auto}
+h1{font-size:1.35rem;margin:18px 0 2px}h2{font-size:1.1rem;margin:0 0 8px}h3{font-size:1rem;margin:0}
+.sub{color:var(--mu);font-size:.88rem;margin:0 0 12px}
+nav{display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px;position:sticky;top:0;background:var(--bg);z-index:5}
+nav a{flex:none;padding:8px 13px;border-radius:999px;border:1px solid var(--bd);color:var(--mu);text-decoration:none;font-size:.92rem;background:var(--card)}
+nav a.on{background:var(--ac);border-color:var(--ac);color:#fff}
+.c{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin:0 0 12px}
+.bar{height:8px;border-radius:99px;background:var(--bd);overflow:hidden;position:relative}
+.bar i{display:block;height:100%;background:var(--ac)}.bar b{position:absolute;top:0;bottom:0;width:2px;background:var(--wa)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sp{justify-content:space-between}
+.mu{color:var(--mu);font-size:.85rem}
+button,.btn{font:inherit;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:9px;padding:8px 13px;cursor:pointer;text-decoration:none;display:inline-block}
+button.p{background:var(--ac);border-color:var(--ac);color:#fff}button.d{color:var(--wa)}button.s{padding:4px 9px;font-size:.82rem}
+input,select,textarea{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:9px;padding:9px 10px;width:100%}
+textarea{min-height:130px;resize:vertical}
+label{display:block;font-size:.82rem;color:var(--mu);margin:10px 0 3px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cal{width:100%;border-collapse:separate;border-spacing:3px;table-layout:fixed}
+.cal th{font-size:.75rem;color:var(--mu);font-weight:500;padding:4px 0}
+.cal td{height:62px;border:1px solid var(--bd);border-radius:9px;vertical-align:top;padding:4px 5px;cursor:pointer;background:var(--card);overflow:hidden}
+.cal td.out{opacity:.35}.cal td.l{background:var(--acs);border-color:var(--ac)}
+.cal td.x{background:repeating-linear-gradient(45deg,var(--bg),var(--bg) 5px,var(--bd) 5px,var(--bd) 6px)}
+.cal td.t{outline:2px solid var(--wa)}
+.cal .n{font-size:.85rem;font-weight:600}.cal .h{font-size:.7rem;color:var(--ac);float:right}
+.dots{display:flex;gap:3px;flex-wrap:wrap;margin-top:3px}.dots i{width:9px;height:9px;border-radius:50%;border:2px solid var(--ac);background:var(--ac)}.dots i.p{background:transparent}
+.en{border-left:5px solid var(--bd);padding-left:10px}
+.pill{display:inline-block;font-size:.74rem;padding:2px 8px;border-radius:99px;background:var(--acs);color:var(--ac)}.pill.p{background:#f6e3d6;color:var(--wa)}
+@media (prefers-color-scheme:dark){.pill.p{background:#43302a}}
+.warn{background:#f6e3d6;color:#7a3a14;border-radius:9px;padding:8px 11px;font-size:.88rem;margin:0 0 12px}
+@media (prefers-color-scheme:dark){.warn{background:#43302a;color:#f0b89b}}
+.cal td{font-size:.8rem}
+@media (max-width:520px){.cal td{height:54px;padding:3px}.g2{grid-template-columns:1fr}.cal .h{display:none}}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:9px 16px;border-radius:99px;font-size:.9rem;opacity:0;transition:.2s;pointer-events:none}
+#toast.on{opacity:1}
+</style></head><body>
+<div id="w">
+<h1>Diario del corso pre-A1</h1>
+<div class="row sp" style="margin-bottom:10px"><span class="sub" id="st" style="margin:0">Caricamento…</span><button class="s" data-a="rf">Aggiorna</button></div>
+<div id="warn"></div>
+<nav id="nav"></nav>
+<div id="app"></div>
+</div>
+<div id="toast"></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const ds=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const pd=s=>{const[a,b,c]=s.split('-').map(Number);return new Date(a,b-1,c)};
+const GI=['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
+const MESI=['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+const KN=['Nessun colore','Rosso','Arancione','Giallo','Verde','Azzurro','Viola'];
+const KC=['','#d6453d','#e67e22','#f1c40f','#2e9664','#3484d6','#8e5fc4'];
+const LV=['Va bene','Da seguire','Ha bisogno di aiuto'];
+const T=(id,n,h)=>({id,n,h});
+const DEF={start:'2026-11-04',end:'2027-02-11',weekly:{1:4,3:4,4:3},
+ closures:[{a:'2026-12-07',b:'2026-12-07',l:'Niente lezione'},{a:'2026-12-24',b:'2027-01-06',l:'Scuola chiusa'}],
+ modules:[
+ {id:'m1',n:'Introduzione alla lingua italiana',h:50,t:[T('t1','Alfabeto e pronuncia',14),T('t2','Saluti e presentazioni',14),T('t3','Numeri e colori',11),T('t4','Giorni della settimana e mesi dell’anno',11)]},
+ {id:'m2',n:'Grammatica essenziale, lessico e comunicazione di base',h:65,t:[T('t5','Articoli determinativi e indeterminativi',6),T('t6','Pronomi personali',4),T('t7','Verbi essere e avere',6),T('t8','Presente indicativo: verbi regolari e alcuni irregolari',8),T('t9','Espressioni di cortesia',3),T('t10','Fare acquisti e ordinare al ristorante',6),T('t11','Chiedere e dare indicazioni',5),T('t12','La famiglia e gli amici',5),T('t13','La casa e gli oggetti di uso comune',5),T('t14','Il cibo e le bevande',5),T('t15','Luoghi in città: negozi, ristoranti, mezzi di trasporto',6),T('t16','Formulare domande e risposte semplici',6)]},
+ {id:'m3',n:'Attività interattive e apprendimento',h:20,t:[T('t17','Attività interattive su contenuti già svolti',20)]}]};
+const COL={entries:'entries',students:'students',diff:'difficulties'};
+let DB=null,S={config:null,entries:{},students:{},diff:{}},loaded=false,month=null,edit={},pending=false,armed=null;
+const cfg=()=>S.config||DEF;
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const today=()=>ds(new Date());
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('on'),2200)}
+function closure(d){return cfg().closures.find(c=>c.a<=d&&d<=c.b)}
+function hoursOn(d){if(closure(d))return 0;return +cfg().weekly[pd(d).getDay()]||0}
+function lessons(){const c=cfg(),r=[];for(let x=pd(c.start),e=pd(c.end);x<=e;x.setDate(x.getDate()+1)){const d=ds(x),h=hoursOn(d);if(h)r.push({d,h})}return r}
+function topics(){return cfg().modules.flatMap(m=>m.t.map(t=>({...t,m:m.n})))}
+const tname=id=>(topics().find(t=>t.id===id)||{n:''}).n;
+function entriesOn(d){return Object.entries(S.entries).filter(([,e])=>e.date===d).map(([id,e])=>({id,...e}))}
+function fmt(d){const x=pd(d);return GI[x.getDay()]+' '+x.getDate()+' '+MESI[x.getMonth()]+' '+x.getFullYear()}
+/* ---- storage (GitHub) ---- */
+const CK='dc3-cfg',DK='dc3-data';
+let G={owner:'',repo:'',token:'',path:'diario.json',branch:''},sha=null,pendingFns=[],chain=Promise.resolve();
+try{G=Object.assign(G,JSON.parse(localStorage.getItem(CK)||'{}'))}catch(e){}
+const hasG=()=>G.owner&&G.repo&&G.token;
+function cacheLocal(){try{localStorage.setItem(DK,JSON.stringify(S))}catch(e){}}
+function setSync(m,bad){const e=$('#st');if(e){e.textContent=m;e.style.color=bad?'var(--wa)':''}}
+const b64e=s=>{let r='';new TextEncoder().encode(s).forEach(x=>r+=String.fromCharCode(x));return btoa(r)};
+const b64d=s=>new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g,'')),c=>c.charCodeAt(0)));
+const base=()=>`https://api.github.com/repos/${G.owner}/${G.repo}`;
+const hdr=()=>({Authorization:'Bearer '+G.token,Accept:'application/vnd.github+json'});
+const api=(m,body)=>fetch(`${base()}/contents/${G.path}`+(m==='GET'?`?t=${Date.now()}`+(G.branch?`&ref=${encodeURIComponent(G.branch)}`:''):''),{method:m,cache:'no-store',headers:hdr(),body:body?JSON.stringify(body):undefined});
+async function pull(){
+ const r=await api('GET');
+ if(r.status===404){const q=await fetch(base(),{cache:'no-store',headers:hdr()});if(!q.ok)throw new Error('Repository non trovato o token senza accesso');sha=null;return}
+ if(r.status===401)throw new Error('Token non valido o scaduto');
+ if(!r.ok)throw new Error('Errore GitHub '+r.status);
+ const j=await r.json();sha=j.sha;
+ const d=JSON.parse(b64d(j.content));S={config:d.config||null,entries:d.entries||{},students:d.students||{},diff:d.diff||{}};
+}
+async function push(){
+ const body={message:'Aggiornamento diario',content:b64e(JSON.stringify(S)),sha:sha||undefined};
+ if(G.branch)body.branch=G.branch;
+ const r=await api('PUT',body);
+ if(r.status===409||r.status===422)return'conflict';
+ if(r.status===401||r.status===403||r.status===404)throw new Error('Il token non ha il permesso di scrivere su questo repository');
+ if(!r.ok)throw new Error('Errore GitHub '+r.status);
+ sha=(await r.json()).content.sha;return'ok';
+}
+function enqueue(fn){
+ pendingFns.push(fn);
+ chain=chain.then(async()=>{
+  setSync('Salvataggio…');
+  for(let i=0;i<4;i++){
+   try{const r=await push();if(r==='ok'){pendingFns=pendingFns.filter(f=>f!==fn);cacheLocal();setSync('Salvato su GitHub · '+new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}));return true}
+    await pull();pendingFns.forEach(f=>f());cacheLocal();render()}
+   catch(e){setSync('Non salvato: '+e.message+' (modifica tenuta su questo dispositivo)',true);toast('Salvataggio non riuscito');return false}
+  }return false}).catch(()=>false);
+ return chain}
+function apply(fn){fn();cacheLocal();render();return hasG()?enqueue(fn):Promise.resolve(true)}
+const put=(col,id,obj)=>apply(()=>{if(col==='config')S.config=obj;else S[col][id]=obj});
+const del=(col,id)=>apply(()=>{delete S[col][id]});
+async function refresh(){
+ if(!hasG())return;
+ if(pendingFns.length)return;
+ try{setSync('Aggiornamento…');await pull();cacheLocal();
+  if(sha===null){await enqueue(()=>{})}
+  else setSync('Aggiornato · '+new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}));
+  softRender()}
+ catch(e){setSync('Impossibile aggiornare: '+e.message,true)}
+}
+function softRender(){const a=document.activeElement;if(a&&$('#app').contains(a)&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)){pending=true;return}render()}
+document.addEventListener('focusout',()=>setTimeout(()=>{if(pending&&!(document.activeElement&&$('#app').contains(document.activeElement)&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))){pending=false;render()}},150));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
+async function init(){
+ try{const l=JSON.parse(localStorage.getItem(DK)||'null');if(l)S=Object.assign(S,l)}catch(e){}
+ loaded=true;
+ if(!hasG()){setSync('Non collegato a GitHub: i dati restano solo su questo dispositivo.',true);if(!location.hash)location.hash='sync';render();return}
+ render();await refresh();
+}
+/* ---- views ---- */
+const TABS=[['piano','Piano'],['calendario','Calendario'],['nota','Nota veloce'],['diario','Diario'],['classe','Classe'],['difficolta','Difficoltà'],['dati','Dati'],['sync','Sincronia']];
+function route(){const h=location.hash.slice(1)||'piano';if(h.startsWith('giorno-'))return{v:'giorno',d:h.slice(7)};return{v:h}}
+function bar(done,plan,tot,mark){const p=x=>Math.min(100,tot?x/tot*100:0);return`<div class="bar"><i style="width:${p(done)}%"></i>${mark!=null?`<b style="left:${p(mark)}%"></b>`:''}</div>`}
+function sums(){const f={},p={};for(const e of Object.values(S.entries)){const m=e.s==='f'?f:p;m[e.u||'']=(m[e.u||'']||0)+(+e.h||0)}return{f,p}}
+function vPiano(){
+ const L=lessons(),tot=L.reduce((a,l)=>a+l.h,0),t0=today(),el=L.filter(l=>l.d<=t0).reduce((a,l)=>a+l.h,0),{f,p}=sums();
+ const done=Object.values(f).reduce((a,b)=>a+b,0),target=cfg().modules.reduce((a,m)=>a+m.h,0);
+ let h=`<div class="c"><div class="row sp"><h2>Corso: ${target} ore</h2><span class="mu">${L.length} lezioni · ${tot} ore in calendario</span></div>
+ <p class="mu" style="margin:0 0 8px">Fatte (registrate) ${done} h · ore di lezione trascorse a oggi ${el} h · la linea arancione è dove dovresti essere.</p>${bar(done,0,tot,el)}
+ ${tot!==target?`<p class="mu" style="color:var(--wa)">Attenzione: il calendario dà ${tot} ore, il corso ne prevede ${target}. Controlla Dati.</p>`:''}</div>`;
+ for(const m of cfg().modules){
+  const md=m.t.reduce((a,t)=>a+(f[t.id]||0),0),sum=m.t.reduce((a,t)=>a+t.h,0);
+  h+=`<div class="c"><div class="row sp"><h3>${esc(m.n)}</h3><span class="mu">${md} / ${m.h} h</span></div><div style="margin:8px 0">${bar(md,0,m.h)}</div>
+  ${sum!==m.h?`<p class="mu" style="color:var(--wa);margin:0 0 6px">Gli argomenti sommano ${sum} h su ${m.h}.</p>`:''}`;
+  for(const t of m.t){const a=f[t.id]||0,b=p[t.id]||0;
+   h+=`<div style="padding:9px 0;border-top:1px solid var(--bd)"><div class="row sp"><span>${esc(t.n)}</span>
+   <span class="row" style="gap:5px"><span class="mu">${a}${b?` (+${b} previste)`:''} /</span><input type="number" step="0.5" min="0" value="${t.h}" data-th="${t.id}" style="width:64px;padding:4px 6px"><span class="mu">h</span></span></div>${bar(a,0,t.h)}</div>`}
+  h+='</div>'}
+ const un=(f['']||0)+(p['']||0);if(un)h+=`<p class="mu">${un} h di voci senza argomento assegnato.</p>`;
+ return h}
+function vCal(){
+ if(!month){const d=pd(today()),s=pd(cfg().start);month=ds(d>=s&&d<=pd(cfg().end)?d:s).slice(0,7)}
+ const[y,mo]=month.split('-').map(Number),first=new Date(y,mo-1,1),off=(first.getDay()+6)%7,t0=today();
+ let h=`<div class="c"><div class="row sp" style="margin-bottom:8px"><button data-a="mm" data-v="-1">‹</button><h2 style="margin:0">${MESI[mo-1]} ${y}</h2><button data-a="mm" data-v="1">›</button></div>
+ <table class="cal"><tr>${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(x=>`<th>${x}</th>`).join('')}</tr>`;
+ const x=new Date(y,mo-1,1-off);
+ for(let r=0;r<6;r++){h+='<tr>';for(let c=0;c<7;c++){const d=ds(x),inm=x.getMonth()===mo-1,hr=hoursOn(d),cl=closure(d),es=entriesOn(d),inr=d>=cfg().start&&d<=cfg().end;
+  h+=`<td data-a="go" data-d="${d}" class="${inm?'':'out'} ${hr&&inr?'l':''} ${cl&&inr?'x':''} ${d===t0?'t':''}" title="${cl?esc(cl.l):''}"><span class="n">${x.getDate()}</span>${hr&&inr?`<span class="h">${hr}h</span>`:''}
+  <div class="dots">${es.slice(0,6).map(e=>`<i class="${e.s==='f'?'':'p'}" style="${e.k?`border-color:${KC[e.k]};background:${e.s==='f'?KC[e.k]:'transparent'}`:''}"></i>`).join('')}</div></td>`;x.setDate(x.getDate()+1)}
+  h+='</tr>';if(x.getMonth()!==mo-1&&r>=3)break}
+ return h+`</table><p class="mu" style="margin:8px 0 0">Verde = lezione (ore). A righe = chiuso. Pallino pieno = fatto, vuoto = da fare. Tocca un giorno per aprire la pagina.</p><div class="row" style="margin-top:8px"><button data-a="mt">Vai a oggi</button></div></div>`}
+function topicSelect(v){return`<select name="u"><option value="">— nessun argomento —</option>${cfg().modules.map(m=>`<optgroup label="${esc(m.n)}">${m.t.map(t=>`<option value="${t.id}" ${t.id===v?'selected':''}>${esc(t.n)}</option>`).join('')}</optgroup>`).join('')}</select>`}
+function entryForm(d,showDate){
+ const e=edit.entry&&S.entries[edit.entry]?{id:edit.entry,...S.entries[edit.entry]}:null;
+ const used=entriesOn(d).filter(x=>!e||x.id!==e.id).reduce((a,x)=>a+(+x.h||0),0),def=e?e.h:Math.max(0,hoursOn(d)-used)||'';
+ return`<form class="c" data-f="entry"><h2>${e?'Modifica voce':'Nuova voce'}</h2><input type="hidden" name="id" value="${e?e.id:''}">
+ ${showDate?`<label>Data</label><input type="date" name="date" value="${e?e.date:d}" required>`:`<input type="hidden" name="date" value="${d}">`}
+ <label>Argomento</label>${topicSelect(e?e.u:'')}
+ <div class="g2"><div><label>Ore</label><input type="number" step="0.5" min="0" name="h" value="${def}"></div>
+ <div><label>Stato</label><select name="s"><option value="p" ${e&&e.s==='p'?'selected':''}>Da fare</option><option value="f" ${!e||e.s==='f'?'selected':''}>Fatto</option></select></div></div>
+ <label>Cosa si fa / cosa è stato fatto</label><textarea name="t" placeholder="Scrivi o detta qui…">${esc(e?e.t:'')}</textarea>
+ <label>Materiali (schede, giochi, link)</label><input name="m" value="${esc(e?e.m:'')}">
+ <label>Colore</label><select name="k">${KN.map((n,i)=>`<option value="${i}" ${(e?+e.k:0)===i?'selected':''}>${n}</option>`).join('')}</select>
+ <div class="row" style="margin-top:12px"><button class="p">${e?'Salva modifiche':'Aggiungi'}</button>${e?'<button type="button" data-a="ce">Annulla</button>':''}</div>
+ <p class="mu" style="margin:10px 0 0">Per dettare: tocca il microfono sulla tastiera del telefono. In auto, registra con l’app Memo vocali o Registratore (trascrive da sola) e incolla qui il testo.</p></form>`}
+function entryCard(e,link){const k=+e.k||0;
+ return`<div class="c en" style="border-left-color:${k?KC[k]:'var(--bd)'}"><div class="row sp"><span><span class="pill ${e.s==='f'?'':'p'}">${e.s==='f'?'Fatto':'Da fare'}</span> ${e.h?`<span class="mu">${e.h} h</span>`:''}</span>
+ <span class="row" style="gap:5px">${link?`<button class="s" data-a="go" data-d="${e.date}">Apri giorno</button>`:''}<button class="s" data-a="ee" data-id="${e.id}" data-d="${e.date}">Modifica</button><button class="s d" data-a="de" data-id="${e.id}">Elimina</button></span></div>
+ ${link?`<div class="mu" style="margin-top:4px">${fmt(e.date)}</div>`:''}
+ ${e.u?`<div style="margin-top:4px;font-weight:600">${esc(tname(e.u))}</div>`:''}
+ ${e.t?`<div style="margin-top:4px;white-space:pre-wrap">${esc(e.t)}</div>`:''}${e.m?`<div class="mu" style="margin-top:4px">Materiali: ${esc(e.m)}</div>`:''}</div>`}
+function vDay(d){
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return'<p>Data non valida.</p>';
+ const hr=hoursOn(d),cl=closure(d),es=entriesOn(d).sort((a,b)=>(a.s>b.s?-1:1));
+ const L=lessons(),i=L.findIndex(l=>l.d>=d),pr=[...L].reverse().find(l=>l.d<d),nx=L.find(l=>l.d>d);
+ return`<div class="row sp" style="margin-bottom:8px"><a class="btn" href="#calendario">‹ Calendario</a><span class="row" style="gap:6px">${pr?`<a class="btn" href="#giorno-${pr.d}">‹ Lezione prec.</a>`:''}${nx?`<a class="btn" href="#giorno-${nx.d}">Lezione succ. ›</a>`:''}</span></div>
+ <div class="c"><h2 style="margin:0;text-transform:capitalize">${fmt(d)}</h2><p class="mu" style="margin:4px 0 0">${hr?`Lezione di ${hr} ore`:cl?esc(cl.l):'Nessuna lezione in calendario'}${d===today()?' · oggi':''}</p></div>
+ ${es.map(e=>entryCard(e,false)).join('')||'<p class="mu">Ancora nessuna voce per questo giorno.</p>'}${entryForm(d,false)}`}
+function vNota(){const L=lessons(),t0=today(),sug=(L.find(l=>l.d>=t0)||L[L.length-1]||{d:t0}).d,pr=[...L].reverse().find(l=>l.d<=t0);
+ const d=edit.nd||(pr?pr.d:sug);
+ return`<div class="c"><h2>Nota veloce</h2><p class="mu" style="margin:0">Scegli la data e scrivi o incolla la nota. Ultima lezione: ${pr?fmt(pr.d):'—'}.</p></div>${entryForm(edit.entry&&S.entries[edit.entry]?S.entries[edit.entry].date:d,true)}`}
+function vDiario(){
+ const q=(edit.q||'').toLowerCase(),f=edit.fs||'';
+ const es=Object.entries(S.entries).map(([id,e])=>({id,...e})).filter(e=>(!f||e.s===f)&&(!q||(e.t+' '+e.m+' '+tname(e.u)).toLowerCase().includes(q))).sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0);
+ return`<div class="c"><div class="g2"><input data-q placeholder="Cerca…" value="${esc(edit.q||'')}"><select data-fs><option value="">Tutte</option><option value="f" ${f==='f'?'selected':''}>Fatte</option><option value="p" ${f==='p'?'selected':''}>Da fare</option></select></div></div>
+ ${es.map(e=>entryCard(e,true)).join('')||'<p class="mu">Nessuna voce. Apri il calendario e scegli un giorno.</p>'}`}
+function vClasse(){
+ const e=edit.st&&S.students[edit.st]?{id:edit.st,...S.students[edit.st]}:null;
+ const list=Object.entries(S.students).map(([id,s])=>({id,...s})).sort((a,b)=>(a.n||'').localeCompare(b.n||''));
+ return`<form class="c" data-f="st"><h2>${e?'Modifica':'Nuovo corsista'}</h2><input type="hidden" name="id" value="${e?e.id:''}"><label>Nome</label><input name="n" value="${esc(e?e.n:'')}" required>
+ <label>Livello di attenzione</label><select name="l">${LV.map((n,i)=>`<option value="${i}" ${(e?+e.l:0)===i?'selected':''}>${n}</option>`).join('')}</select>
+ <label>Note</label><textarea name="o" style="min-height:80px">${esc(e?e.o:'')}</textarea><div class="row" style="margin-top:10px"><button class="p">Salva</button>${e?'<button type="button" data-a="cs">Annulla</button>':''}</div></form>
+ ${list.map(s=>`<div class="c"><div class="row sp"><b>${esc(s.n)}</b><span class="pill ${+s.l?'p':''}">${LV[+s.l||0]}</span></div>${s.o?`<div style="margin-top:6px;white-space:pre-wrap">${esc(s.o)}</div>`:''}
+ <div class="row" style="margin-top:8px"><button class="s" data-a="es" data-id="${s.id}">Modifica</button><button class="s d" data-a="ds" data-id="${s.id}">Elimina</button></div></div>`).join('')||'<p class="mu">Nessun corsista inserito.</p>'}`}
+function vDiff(){
+ const list=Object.entries(S.diff).map(([id,s])=>({id,...s})).sort((a,b)=>(!!a.r-!!b.r)||(a.d<b.d?1:-1));
+ return`<form class="c" data-f="df"><h2>Nuova difficoltà</h2><label>Argomento</label>${topicSelect('')}<label>Cosa è difficile</label><textarea name="t" style="min-height:80px" required></textarea><label>Data</label><input type="date" name="d" value="${today()}"><div style="margin-top:10px"><button class="p">Aggiungi</button></div></form>
+ ${list.map(x=>`<div class="c" style="${x.r?'opacity:.6':''}"><div class="row sp"><b>${esc(tname(x.u)||'Generale')}</b><span class="mu">${x.d?fmt(x.d):''}</span></div><div style="margin:6px 0;white-space:pre-wrap">${esc(x.t)}</div>
+ <div class="row"><button class="s" data-a="tr" data-id="${x.id}">${x.r?'Riapri':'Segna risolta'}</button><button class="s d" data-a="dd" data-id="${x.id}">Elimina</button></div></div>`).join('')||'<p class="mu">Nessuna difficoltà segnata.</p>'}`}
+function vDati(){
+ const c=cfg(),L=lessons(),tot=L.reduce((a,l)=>a+l.h,0),W=[1,2,3,4,5,6,0];
+ return`<form class="c" data-f="cfg"><h2>Calendario del corso</h2><div class="g2"><div><label>Inizio</label><input type="date" name="start" value="${c.start}"></div><div><label>Fine</label><input type="date" name="end" value="${c.end}"></div></div>
+ <label>Ore per giorno della settimana</label><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px">${W.map(g=>`<div class="mu" style="text-align:center">${GI[g].slice(0,3)}<input type="number" step="0.5" min="0" name="w${g}" value="${c.weekly[g]||0}" style="padding:6px 2px;text-align:center"></div>`).join('')}</div>
+ <label>Giorni di chiusura (un intervallo per riga: da, a, motivo; es. 2026-12-24, 2027-01-06, Scuola chiusa)</label><textarea name="cl" style="min-height:90px">${esc(c.closures.map(x=>[x.a,x.b,x.l].join(', ')).join('\n'))}</textarea>
+ <p class="mu">Con queste impostazioni: ${L.length} lezioni, ${tot} ore, ultima lezione ${L.length?fmt(L[L.length-1].d):'—'}.</p><div class="row"><button class="p">Salva calendario</button><button type="button" data-a="rc">Ripristina predefiniti</button></div></form>
+ <div class="c"><h2>Importa dati del vecchio diario</h2><p class="mu" style="margin:0 0 6px">Incolla qui la stringa di dati copiata dalla vecchia app. Le voci vengono aggiunte al diario, senza cancellare nulla.</p><textarea data-imp style="min-height:90px"></textarea><div style="margin-top:8px"><button data-a="imp">Importa</button></div></div>
+ <div class="c"><h2>Copia di sicurezza</h2><p class="mu" style="margin:0 0 6px">Testo da copiare e conservare.</p><textarea readonly onclick="this.select()" style="min-height:90px">${esc(JSON.stringify({config:S.config,entries:S.entries,students:S.students,diff:S.diff}))}</textarea></div>`}
+function render(){
+ const r=route(),on=r.v==='giorno'?'calendario':r.v;
+ $('#nav').innerHTML=TABS.map(([k,n])=>`<a href="#${k}" class="${k===on?'on':''}">${n}</a>`).join('');
+ const V={sync:vSync,piano:vPiano,calendario:vCal,nota:vNota,diario:vDiario,classe:vClasse,difficolta:vDiff,dati:vDati};
+ $('#app').innerHTML=!loaded?'<p class="mu">Caricamento…</p>':r.v==='giorno'?vDay(r.d):(V[r.v]||vPiano)();
+}
+window.addEventListener('hashchange',()=>{edit={};render();scrollTo(0,0)});
+/* ---- events ---- */
+function arm(key,fn){if(armed===key){armed=null;fn()}else{armed=key;toast('Tocca di nuovo per confermare');setTimeout(()=>{if(armed===key)armed=null},3000)}}
+document.addEventListener('click',async ev=>{
+ const el=ev.target.closest('[data-a]');if(!el)return;const a=el.dataset.a,id=el.dataset.id;
+ if(a==='go')location.hash='giorno-'+el.dataset.d;
+ else if(a==='mm'){const[y,m]=month.split('-').map(Number),x=new Date(y,m-1+ +el.dataset.v,1);month=ds(x).slice(0,7);render()}
+ else if(a==='mt'){month=today().slice(0,7);render()}
+ else if(a==='ee'){edit.entry=id;if(route().v==='giorno')render();else{edit.nd=el.dataset.d;location.hash='nota';edit.entry=id;render()}}
+ else if(a==='ce'){edit.entry=null;render()}
+ else if(a==='de')arm('de'+id,()=>del('entries',id));
+ else if(a==='es'){edit.st=id;render();scrollTo(0,0)}else if(a==='cs'){edit.st=null;render()}
+ else if(a==='ds')arm('ds'+id,()=>del('students',id));
+ else if(a==='dd')arm('dd'+id,()=>del('diff',id));
+ else if(a==='tr'){const x=S.diff[id];await put('diff',id,{...x,r:!x.r})}
+ else if(a==='rc')arm('rc',async()=>{if(await put('config','',JSON.parse(JSON.stringify(DEF))))toast('Ripristinato')});
+ else if(a==='imp')importOld();
+ else if(a==='rf'){if(hasG())refresh();else location.hash='sync'}
+ else if(a==='dc')arm('dc',()=>{G.token='';try{localStorage.setItem(CK,JSON.stringify(G))}catch(e){}setSync('Scollegato.',true);render()});
+});
+document.addEventListener('input',ev=>{const t=ev.target;if(t.matches('[data-q]')){edit.q=t.value;clearTimeout(input.h);input.h=setTimeout(()=>{render();const n=$('[data-q]');if(n){n.focus();n.setSelectionRange(99,99)}},250)}});
+function input(){}
+document.addEventListener('change',async ev=>{const t=ev.target;
+ if(t.matches('[data-fs]')){edit.fs=t.value;render()}
+ else if(t.dataset.th){const c=JSON.parse(JSON.stringify(cfg()));c.modules.forEach(m=>m.t.forEach(x=>{if(x.id===t.dataset.th)x.h=+t.value||0}));await put('config','',c)}});
+document.addEventListener('submit',async ev=>{
+ const f=ev.target.closest('form[data-f]');if(!f)return;ev.preventDefault();const k=f.dataset.f,v=Object.fromEntries(new FormData(f));
+ if(k==='entry'){const id=v.id||uid();if(await put('entries',id,{date:v.date,u:v.u,h:+v.h||0,s:v.s,t:v.t.trim(),m:v.m.trim(),k:+v.k||0})){edit.entry=null;toast('Salvato');if(route().v==='nota'){edit.nd=v.date;location.hash='giorno-'+v.date}else render()}}
+ else if(k==='st'){const id=v.id||uid();if(await put('students',id,{n:v.n.trim(),l:+v.l,o:v.o.trim()})){edit.st=null;toast('Salvato');render()}}
+ else if(k==='df'){if(await put('diff',uid(),{u:v.u,t:v.t.trim(),d:v.d,r:false}))toast('Aggiunto')}
+ else if(k==='sync'){G={owner:v.owner.trim(),repo:v.repo.trim().replace(/^.*\//,''),token:v.token.trim()||G.token,path:(v.path.trim()||'diario.json').replace(/^\//,''),branch:v.branch.trim()};try{localStorage.setItem(CK,JSON.stringify(G))}catch(e){}sha=null;toast('Collego…');await refresh();render()}
+ else if(k==='cfg'){const c=JSON.parse(JSON.stringify(cfg()));c.start=v.start;c.end=v.end;c.weekly={};for(const g of[0,1,2,3,4,5,6])if(+v['w'+g])c.weekly[g]=+v['w'+g];
+  c.closures=v.cl.split('\n').map(l=>l.split(',').map(s=>s.trim())).filter(p=>/^\d{4}-\d{2}-\d{2}$/.test(p[0])).map(p=>({a:p[0],b:/^\d{4}-\d{2}-\d{2}$/.test(p[1]||'')?p[1]:p[0],l:p.slice(2).join(', ')||'Chiuso'}));
+  if(await put('config','',c))toast('Calendario salvato')}
+});
+async function importOld(){
+ const raw=($('[data-imp]').value||'').trim();if(!raw)return toast('Incolla prima la stringa');
+ let o;try{o=JSON.parse(raw)}catch(e){try{o=JSON.parse(decodeURIComponent(escape(atob(raw))))}catch(e2){return toast('Stringa non riconosciuta')}}
+ const un={};(o.units||[]).forEach(u=>un[u.id]=u.n);const items=[];
+ for(const x of o.log||[])if(x.d)items.push(['entries',uid(),{date:x.d,u:'',h:+x.h||0,s:x.s==='p'?'p':'f',t:(un[x.u]?'['+un[x.u]+'] ':'')+(x.t||''),m:x.m||'',k:+x.k||0}]);
+ for(const x of o.st||[])items.push(['students',uid(),{n:x.n||'',l:+x.l||0,o:x.o||''}]);
+ for(const x of o.df||[])items.push(['diff',uid(),{u:'',t:(un[x.u]?'['+un[x.u]+'] ':'')+(x.t||''),d:x.d||today(),r:!!x.r}]);
+ await apply(()=>items.forEach(([c,id,v])=>S[c][id]=v));toast('Importati '+items.length+' elementi');
+}
+function vSync(){
+ return`<form class="c" data-f="sync"><h2>Collega a GitHub</h2><p class="mu" style="margin:0 0 6px">I dati si salvano in un file di un tuo repository <b>privato</b>. Su ogni dispositivo inserisci questi dati una sola volta.</p>
+ <div class="g2"><div><label>Utente GitHub</label><input name="owner" value="${esc(G.owner)}" required autocapitalize="none"></div><div><label>Nome del repository privato</label><input name="repo" value="${esc(G.repo)}" required autocapitalize="none"></div></div>
+ <label>Token di accesso ${G.token?'(già salvato: lascia vuoto per mantenerlo)':''}</label><input name="token" type="password" ${G.token?'':'required'} autocomplete="off" placeholder="github_pat_…">
+ <div class="g2"><div><label>File dati</label><input name="path" value="${esc(G.path)}"></div><div><label>Branch (facoltativo)</label><input name="branch" value="${esc(G.branch)}" placeholder="main"></div></div>
+ <div class="row" style="margin-top:12px"><button class="p">Salva e collega</button>${G.token?'<button type="button" class="d" data-a="dc">Scollega questo dispositivo</button>':''}</div></form>
+ <div class="c"><h2>Come si prepara (una volta sola)</h2><ol style="margin:0;padding-left:20px"><li>Su github.com crea un repository nuovo, <b>Private</b>, ad esempio <i>diario-corso-dati</i>. Spunta “Add a README”.</li>
+ <li>Vai su Settings → Developer settings → Personal access tokens → <b>Fine-grained tokens</b> → Generate new token.</li>
+ <li>Resource owner: te. Repository access: <b>Only select repositories</b> → scegli solo <i>diario-corso-dati</i>. Scadenza: la più lunga disponibile.</li>
+ <li>Permissions → Repository permissions → <b>Contents: Read and write</b>. Genera e copia il token.</li>
+ <li>Incollalo qui sopra, insieme a utente e nome del repository. Sull’altro dispositivo ripeti solo l’inserimento.</li></ol>
+ <p class="mu" style="margin:8px 0 0">Il token resta solo nel browser di questo dispositivo. Non incollarlo in chat e non condividerlo.</p></div>`}
+render();init();
+</script>
+
+</body></html>
