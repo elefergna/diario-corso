@@ -25,6 +25,7 @@ textarea{min-height:130px;resize:vertical}
 .print-item{padding:9px 0;border-top:1px solid var(--bd);overflow-wrap:anywhere}
 .print-option{display:flex;align-items:center;gap:8px;color:var(--tx);width:fit-content}
 .print-option input{width:auto;margin:0}
+.attachment-file{max-width:100%;text-align:left;overflow-wrap:anywhere}
 label{display:block;font-size:.82rem;color:var(--mu);margin:10px 0 3px}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .cal{width:100%;border-collapse:separate;border-spacing:3px;table-layout:fixed}
@@ -145,14 +146,75 @@ async function refresh(){
   softRender()}
  catch(e){setSync('Impossibile aggiornare: '+e.message,true)}
 }
-function softRender(){const a=document.activeElement;if(a&&$('#app').contains(a)&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)){pending=true;return}render()}
-document.addEventListener('focusout',()=>setTimeout(()=>{if(pending&&!(document.activeElement&&$('#app').contains(document.activeElement)&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))){pending=false;render()}},150));
+function softRender(){
+ const form=$('form[data-f="entry"]');
+ if(form&&(form.elements.files.files.length||form.querySelector('button.p').disabled)){pending=false;return}
+ const a=document.activeElement;if(a&&$('#app').contains(a)&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)){pending=true;return}render()}
+document.addEventListener('focusout',()=>setTimeout(()=>{if(pending){pending=false;softRender()}},150));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
 async function init(){
  try{const l=JSON.parse(localStorage.getItem(DK)||'null');if(l)S={...S,...l,config:updateCourseConfig(l.config)||null}}catch(e){}
+ try{await loadAttachmentNames()}catch(e){}
  loaded=true;
  if(!hasG()){setSync('Non collegato a GitHub: i dati restano solo su questo dispositivo.',true);render();return}
  render();await refresh();
+}
+/* ---- local attachments ---- */
+const attachmentNames=new Map();
+let attachmentDB;
+function openAttachmentDB(){
+ if(!attachmentDB)attachmentDB=new Promise((resolve,reject)=>{
+  const request=indexedDB.open('dc3-attachments',1);
+  request.onupgradeneeded=()=>request.result.createObjectStore('files');
+  request.onsuccess=()=>resolve(request.result);
+  request.onerror=()=>reject(request.error);
+ }).catch(error=>{attachmentDB=null;throw error});
+ return attachmentDB;
+}
+async function attachmentTransaction(mode,operation){
+ const db=await openAttachmentDB();
+ return new Promise((resolve,reject)=>{
+  const tx=db.transaction('files',mode);
+  tx.onabort=()=>reject(tx.error);
+  try{
+   const request=operation(tx.objectStore('files'));
+   tx.oncomplete=()=>resolve(request?.result);
+  }catch(error){tx.abort();reject(error)}
+ });
+}
+const filesFor=id=>attachmentNames.get(id)||[];
+async function loadAttachmentNames(){
+ const keys=await attachmentTransaction('readonly',store=>store.getAllKeys());
+ attachmentNames.clear();
+ for(const [id,name] of keys)attachmentNames.set(id,[...filesFor(id),name]);
+}
+async function saveAttachments(id,files,removed){
+ await attachmentTransaction('readwrite',store=>{
+  for(const name of removed)store.delete([id,name]);
+  for(const file of files)store.put(file,[id,file.name]);
+ });
+ const names=new Set(filesFor(id).filter(name=>!removed.includes(name)));
+ for(const file of files)names.add(file.name);
+ if(names.size)attachmentNames.set(id,[...names]);else attachmentNames.delete(id);
+}
+async function openAttachment(id,name){
+ const tab=/\.pdf$/i.test(name)?window.open('about:blank','_blank'):null;
+ if(tab)tab.opener=null;
+ try{
+  const file=await attachmentTransaction('readonly',store=>store.get([id,name]));
+  if(!file)throw new Error('File mancante');
+  const url=URL.createObjectURL(tab?new Blob([file],{type:'application/pdf'}):file);
+  if(tab&&!tab.closed)tab.location.replace(url);
+  else{
+   const link=document.createElement('a');
+   link.href=url;link.download=name;document.body.append(link);link.click();link.remove();
+  }
+  setTimeout(()=>URL.revokeObjectURL(url),120000);
+ }catch(e){tab?.close();toast('Impossibile aprire il file in questo browser')}
+}
+function attachmentButtons(id){
+ return filesFor(id).map(name=>`<button type="button" class="s attachment-file"
+  data-a="file" data-id="${esc(id)}" data-name="${esc(name)}">${/\.pdf$/i.test(name)?'Apri PDF':'Scarica'} · ${esc(name)}</button>`).join('');
 }
 /* ---- views ---- */
 const TABS=[['piano','Panoramica'],['calendario','Calendario'],['nota','Nota veloce'],['diario','Diario'],['classe','Classe'],['difficolta','Difficoltà'],['dati','Dati'],['sync','Sincronia']];
@@ -167,12 +229,13 @@ function materialText(value){
  return esc(material);
 }
 function printQueue(){
- const items=Object.entries(S.entries).filter(([,e])=>e.print&&String(e.m||'').trim())
+ const items=Object.entries(S.entries).filter(([id,e])=>e.print&&(String(e.m||'').trim()||filesFor(id).length))
   .sort(([,a],[,b])=>a.date.localeCompare(b.date));
  return `<section class="c"><h2>Da stampare</h2>
  ${items.length?items.map(([id,e])=>`<div class="row sp print-item">
  <div><a class="mu" href="#giorno-${esc(e.date)}">${fmt(e.date)}</a>
- <div>${materialText(e.m)}</div></div>
+ ${e.m?`<div>${materialText(e.m)}</div>`:''}
+ <div class="row">${attachmentButtons(id)}</div></div>
  <button class="s" data-a="printed" data-id="${esc(id)}">Segna come stampato</button></div>`).join('')
  :'<p class="mu" style="margin:0">Nessun materiale da stampare.</p>'}</section>`;
 }
@@ -217,6 +280,9 @@ function entryForm(d,showDate){
  <div><label>Stato</label><select name="s"><option value="p" ${!e||e.s==='p'?'selected':''}>Da fare</option><option value="f" ${e&&e.s==='f'?'selected':''}>Fatto</option></select></div></div>
  <label>Cosa si fa / cosa è stato fatto</label><textarea name="t" placeholder="Scrivi o detta qui…">${esc(e?e.t:'')}</textarea>
  <label for="entry-material">Materiali (schede, giochi, link)</label><input id="entry-material" name="m" value="${esc(e?e.m:'')}" placeholder="Scrivi il materiale o incolla il link al file">
+ <label for="entry-files">Allega file dal PC</label><input id="entry-files" type="file" name="files" multiple>
+ <p class="mu" style="margin:4px 0">Gli allegati si salvano quando salvi la voce e sono disponibili in questo browser.</p>
+ ${e?filesFor(e.id).map(name=>`<label class="print-option attachment-file"><input type="checkbox" name="removeFile" value="${esc(name)}"> Rimuovi ${esc(name)}</label>`).join(''):''}
  <label class="print-option"><input type="checkbox" name="print" ${e?.print?'checked':''}> Stampa</label>
  <label>Colore</label><select name="k">${KN.map((n,i)=>`<option value="${i}" ${(e?+e.k:0)===i?'selected':''}>${n}</option>`).join('')}</select>
  <div class="row" style="margin-top:12px"><button class="p">${e?'Salva modifiche':'Aggiungi'}</button>${e?'<button type="button" data-a="ce">Annulla</button>':''}</div>
@@ -228,7 +294,8 @@ function entryCard(e,link){const k=+e.k||0;
  ${edit.mv===e.id?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)"><label>Sposta a una lezione</label><select data-mvsel><option value="">— scegli una lezione —</option>${lessons().map(l=>`<option value="${l.d}">${fs(l.d)} (${l.h} h)${l.d===e.date?' · giorno attuale':''}</option>`).join('')}</select><label>…oppure un’altra data</label><input type="date" data-mvdate><div class="row" style="margin-top:10px"><button class="s p" data-a="mvok" data-id="${e.id}">Sposta</button><button class="s" data-a="mvx">Annulla</button></div></div>`:''}
  ${link?`<div class="mu" style="margin-top:4px">${fmt(e.date)}</div>`:''}
  ${e.u?`<div style="margin-top:4px;font-weight:600">${esc(tname(e.u))}</div>`:''}
- ${e.t?`<div style="margin-top:4px;white-space:pre-wrap">${esc(e.t)}</div>`:''}${e.m?`<div class="mu" style="margin-top:4px">Materiali: ${materialText(e.m)}${e.print?' · Da stampare':''}</div>`:''}</div>`}
+ ${e.t?`<div style="margin-top:4px;white-space:pre-wrap">${esc(e.t)}</div>`:''}${e.m?`<div class="mu" style="margin-top:4px">Materiali: ${materialText(e.m)}</div>`:''}
+ <div class="row">${attachmentButtons(e.id)}</div>${e.print?'<span class="mu">Da stampare</span>':''}</div>`}
 function vDay(d){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return'<p>Data non valida.</p>';
  const hr=hoursOn(d),cl=closure(d),es=entriesOn(d).sort((a,b)=>(a.s>b.s?-1:1));
@@ -280,6 +347,7 @@ document.addEventListener('click',async ev=>{
  else if(a==='mm'){const[y,m]=month.split('-').map(Number),x=new Date(y,m-1+ +el.dataset.v,1);month=ds(x).slice(0,7);render()}
  else if(a==='mt'){month=today().slice(0,7);render()}
  else if(a==='ee'){edit.entry=id;if(route().v==='giorno')render();else{edit.nd=el.dataset.d;location.hash='nota';edit.entry=id;render()}}
+ else if(a==='file'){await openAttachment(id,el.dataset.name)}
  else if(a==='printed'){await apply(()=>{if(S.entries[id])S.entries[id]={...S.entries[id],print:false}})}
  else if(a==='qm'){el.closest('form').querySelector('[name=mn]').value=el.dataset.v}
  else if(a==='sf'||a==='sp'){const x=S.entries[id];if(x){await put('entries',id,{...x,s:a==='sf'?'f':'p'});toast(a==='sf'?'Segnata come fatta':'Rimessa da fare')}}
@@ -287,7 +355,12 @@ document.addEventListener('click',async ev=>{
  else if(a==='mvx'){edit.mv=null;render()}
  else if(a==='mvok'){const bx=el.parentElement.parentElement,nd=bx.querySelector('[data-mvdate]').value||bx.querySelector('[data-mvsel]').value,x=S.entries[id];if(!nd)return toast('Scegli prima una data');if(x){edit.mv=null;await put('entries',id,{...x,date:nd});toast('Spostata a '+fmt(nd))}}
  else if(a==='ce'){edit.entry=null;render()}
- else if(a==='de')arm('de'+id,()=>del('entries',id));
+ else if(a==='de')arm('de'+id,async()=>{
+  const names=filesFor(id);
+  try{if(names.length)await saveAttachments(id,[],names)}
+  catch(e){toast('Impossibile eliminare gli allegati');return}
+  await del('entries',id);
+ });
  else if(a==='es'){edit.st=id;render();scrollTo(0,0)}else if(a==='cs'){edit.st=null;render()}
  else if(a==='ds')arm('ds'+id,()=>del('students',id));
  else if(a==='dd')arm('dd'+id,()=>del('diff',id));
@@ -308,10 +381,19 @@ document.addEventListener('change',async ev=>{const t=ev.target;
  else if(t.matches('[data-fs]')){edit.fs=t.value;render()}
  else if(t.dataset.th){const c=JSON.parse(JSON.stringify(cfg()));c.modules.forEach(m=>m.t.forEach(x=>{if(x.id===t.dataset.th)x.h=+t.value||0}));await put('config','',c)}});
 document.addEventListener('submit',async ev=>{
- const f=ev.target.closest('form[data-f]');if(!f)return;ev.preventDefault();const k=f.dataset.f,v=Object.fromEntries(new FormData(f));
+ const f=ev.target.closest('form[data-f]');if(!f)return;ev.preventDefault();const k=f.dataset.f,data=new FormData(f),v=Object.fromEntries(data);
  if(k==='entry'){
-  if(v.print&&!v.m.trim()){toast('Scrivi cosa va stampato nel campo Materiali');f.elements.m.focus();return}
-  const id=v.id||uid();if(await put('entries',id,{date:v.date,u:v.u,mn:Math.max(0,Math.round(+v.mn)||0),s:v.s,t:v.t.trim(),m:v.m.trim(),print:v.print==='on',k:+v.k||0})){edit.entry=null;toast('Salvato');if(route().v==='nota'){edit.nd=v.date;location.hash='giorno-'+v.date}else render()}}
+  const save=f.querySelector('button.p');
+  if(save.disabled)return;
+  const id=v.id||uid(),files=Array.from(f.elements.files.files),removed=data.getAll('removeFile');
+  if(v.print&&!v.m.trim()&&!files.length&&!filesFor(id).some(name=>!removed.includes(name))){
+   toast('Indica il materiale o allega un file');f.elements.m.focus();return;
+  }
+  save.disabled=true;
+  try{if(files.length||removed.length)await saveAttachments(id,files,removed)}
+  catch(e){save.disabled=false;toast('Impossibile salvare gli allegati in questo browser');return}
+  if(await put('entries',id,{date:v.date,u:v.u,mn:Math.max(0,Math.round(+v.mn)||0),s:v.s,t:v.t.trim(),m:v.m.trim(),print:v.print==='on',k:+v.k||0})){edit.entry=null;toast('Salvato');if(route().v==='nota'){edit.nd=v.date;location.hash='giorno-'+v.date}else render()}
+ }
  else if(k==='st'){const id=v.id||uid();if(await put('students',id,{n:v.n.trim(),l:+v.l,o:v.o.trim()})){edit.st=null;toast('Salvato');render()}}
  else if(k==='df'){if(await put('diff',uid(),{u:v.u,t:v.t.trim(),d:v.d,r:false}))toast('Aggiunto')}
  else if(k==='sync'){G={owner:v.owner.trim(),repo:v.repo.trim().replace(/^.*\//,''),token:v.token.trim()||G.token,path:(v.path.trim()||'diario.json').replace(/^\//,''),branch:v.branch.trim()};try{localStorage.setItem(CK,JSON.stringify(G))}catch(e){}sha=null;toast('Collego…');await refresh();render()}
