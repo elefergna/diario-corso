@@ -25,6 +25,10 @@ textarea{min-height:130px;resize:vertical}
 .print-item{padding:9px 0;border-top:1px solid var(--bd);overflow-wrap:anywhere}
 .print-option{display:flex;align-items:center;gap:8px;color:var(--tx);width:fit-content}
 .print-option input{width:auto;margin:0}
+.color-picker{margin-top:8px}
+button.color-dot{width:32px;height:32px;padding:0;display:inline-grid;place-items:center;border-radius:50%}
+.color-dot::before{content:"";width:16px;height:16px;border-radius:50%;background:var(--swatch)}
+.color-dot[aria-pressed="true"]{outline:2px solid var(--tx);outline-offset:1px}
 .attachment-file{max-width:100%;text-align:left;overflow-wrap:anywhere}
 label{display:block;font-size:.82rem;color:var(--mu);margin:10px 0 3px}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -62,7 +66,8 @@ const ds=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 const pd=s=>{const[a,b,c]=s.split('-').map(Number);return new Date(a,b-1,c)};
 const GI=['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
 const MESI=['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
-const KN=['Nessun colore','Rosso','Arancione','Giallo','Verde','Azzurro','Viola'];
+const KN=['Nessun colore','Rosso','Arancione','Giallo','Verde','Blu','Viola'];
+const COLOR_OPTIONS=[3,4,1,5,6];
 const KC=['','#d6453d','#e67e22','#f1c40f','#2e9664','#3484d6','#8e5fc4'];
 const LV=['Va bene','Da seguire','Ha bisogno di aiuto'];
 const T=(id,n,h)=>({id,n,h});
@@ -134,7 +139,7 @@ function enqueue(fn){
    catch(e){setSync('Non salvato: '+e.message+' (modifica tenuta su questo dispositivo)',true);toast('Salvataggio non riuscito');return false}
   }return false}).catch(()=>false);
  return chain}
-function apply(fn){fn();cacheLocal();render();return hasG()?enqueue(fn):Promise.resolve(true)}
+function apply(fn,paint=render){fn();cacheLocal();paint();return hasG()?enqueue(fn):Promise.resolve(true)}
 const put=(col,id,obj)=>apply(()=>{if(col==='config')S.config=obj;else S[col][id]=obj});
 const del=(col,id)=>apply(()=>{delete S[col][id]});
 async function refresh(){
@@ -284,13 +289,20 @@ function entryForm(d,showDate){
  <p class="mu" style="margin:4px 0">Gli allegati si salvano quando salvi la voce e sono disponibili in questo browser.</p>
  ${e?filesFor(e.id).map(name=>`<label class="print-option attachment-file"><input type="checkbox" name="removeFile" value="${esc(name)}"> Rimuovi ${esc(name)}</label>`).join(''):''}
  <label class="print-option"><input type="checkbox" name="print" ${e?.print?'checked':''}> Stampa</label>
- <label>Colore</label><select name="k">${KN.map((n,i)=>`<option value="${i}" ${(e?+e.k:0)===i?'selected':''}>${n}</option>`).join('')}</select>
+ <label>Colore</label><select name="k">${[0,...COLOR_OPTIONS,...(+e?.k===2?[2]:[])].map(i=>`<option value="${i}" ${(e?+e.k:0)===i?'selected':''}>${KN[i]}</option>`).join('')}</select>
  <div class="row" style="margin-top:12px"><button class="p">${e?'Salva modifiche':'Aggiungi'}</button>${e?'<button type="button" data-a="ce">Annulla</button>':''}</div>
  <p class="mu" style="margin:10px 0 0">Per dettare: tocca il microfono sulla tastiera del telefono. In auto, registra con l’app Memo vocali o Registratore (trascrive da sola) e incolla qui il testo.</p></form>`}
+function entryColors(id,k){
+ return `<div class="row color-picker" role="group" aria-label="Colore della voce"><span class="mu">Colore</span>
+ ${COLOR_OPTIONS.map(i=>`<button type="button" class="color-dot" style="--swatch:${KC[i]}"
+ title="${KN[i]}" aria-label="${KN[i]}" aria-pressed="${k===i}" data-a="color" data-id="${esc(id)}" data-v="${i}"></button>`).join('')}
+ ${k?`<button type="button" class="s" data-a="color" data-id="${esc(id)}" data-v="0">Togli colore</button>`:''}</div>`;
+}
 function entryCard(e,link){const k=+e.k||0;
  return`<div class="c en" style="border-left-color:${k?KC[k]:'var(--bd)'}"><div class="row sp"><span><span class="pill ${e.s==='f'?'':'p'}">${e.s==='f'?'Fatto':'Da fare'}</span> ${em(e)?`<span class="mu">${fm(em(e))}</span>`:''}</span>
  <span class="row" style="gap:5px">${link?`<button class="s" data-a="go" data-d="${e.date}">Apri giorno</button>`:''}<button class="s" data-a="ee" data-id="${e.id}" data-d="${e.date}">Modifica</button><button class="s d" data-a="de" data-id="${e.id}">Elimina</button></span></div>
  <div class="row" style="margin-top:8px">${e.s==='f'?`<button class="s" data-a="sp" data-id="${e.id}">Rimetti da fare</button>`:`<button class="s p" data-a="sf" data-id="${e.id}">Segna come fatta</button>`}<button class="s" data-a="mv" data-id="${e.id}">Cambia giorno</button></div>
+ ${entryColors(e.id,k)}
  ${edit.mv===e.id?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)"><label>Sposta a una lezione</label><select data-mvsel><option value="">— scegli una lezione —</option>${lessons().map(l=>`<option value="${l.d}">${fs(l.d)} (${l.h} h)${l.d===e.date?' · giorno attuale':''}</option>`).join('')}</select><label>…oppure un’altra data</label><input type="date" data-mvdate><div class="row" style="margin-top:10px"><button class="s p" data-a="mvok" data-id="${e.id}">Sposta</button><button class="s" data-a="mvx">Annulla</button></div></div>`:''}
  ${link?`<div class="mu" style="margin-top:4px">${fmt(e.date)}</div>`:''}
  ${e.u?`<div style="margin-top:4px;font-weight:600">${esc(tname(e.u))}</div>`:''}
@@ -347,6 +359,18 @@ document.addEventListener('click',async ev=>{
  else if(a==='mm'){const[y,m]=month.split('-').map(Number),x=new Date(y,m-1+ +el.dataset.v,1);month=ds(x).slice(0,7);render()}
  else if(a==='mt'){month=today().slice(0,7);render()}
  else if(a==='ee'){edit.entry=id;if(route().v==='giorno')render();else{edit.nd=el.dataset.d;location.hash='nota';edit.entry=id;render()}}
+ else if(a==='color'){
+  const k=Number(el.dataset.v);
+  if(S.entries[id]&&[0,...COLOR_OPTIONS].includes(k)&&Number(S.entries[id].k||0)!==k){
+   const card=el.closest('.en'),link=route().v==='diario';
+   await apply(()=>{if(S.entries[id])S.entries[id]={...S.entries[id],k}},()=>{
+    const next=card.nextElementSibling, parent=card.parentElement;
+    card.outerHTML=entryCard({id,...S.entries[id]},link);
+    (next?next.previousElementSibling:parent.lastElementChild)
+     ?.querySelector(`[data-a="color"][data-v="${k||COLOR_OPTIONS[0]}"]`)?.focus();
+   });
+  }
+ }
  else if(a==='file'){await openAttachment(id,el.dataset.name)}
  else if(a==='printed'){await apply(()=>{if(S.entries[id])S.entries[id]={...S.entries[id],print:false}})}
  else if(a==='qm'){el.closest('form').querySelector('[name=mn]').value=el.dataset.v}
