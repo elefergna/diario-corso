@@ -276,6 +276,7 @@ function finalLessonTopic(d){
  return d>OLD_END&&d<=COURSE_END&&hoursOn(d)?'t17':'';
 }
 function entryForm(d,showDate){
+ const colorLegend={3:'spiegazione',4:'attività',1:'da pianificare',5:'esercizi progressivi',6:'gioco'};
  const e=edit.entry&&S.entries[edit.entry]?{id:edit.entry,...S.entries[edit.entry]}:null;
  const used=entriesOn(d).filter(x=>!e||x.id!==e.id).reduce((a,x)=>a+em(x),0),def=e?em(e):Math.max(0,hoursOn(d)*60-used)||'';
  return`<form class="c" data-f="entry"><h2>${e?'Modifica voce':'Nuova voce'}</h2><input type="hidden" name="id" value="${e?e.id:''}">
@@ -289,7 +290,7 @@ function entryForm(d,showDate){
  <p class="mu" style="margin:4px 0">Gli allegati si salvano quando salvi la voce e sono disponibili in questo browser.</p>
  ${e?filesFor(e.id).map(name=>`<label class="print-option attachment-file"><input type="checkbox" name="removeFile" value="${esc(name)}"> Rimuovi ${esc(name)}</label>`).join(''):''}
  <label class="print-option"><input type="checkbox" name="print" ${e?.print?'checked':''}> Stampa</label>
- <label>Colore</label><select name="k">${[0,...COLOR_OPTIONS,...(+e?.k===2?[2]:[])].map(i=>`<option value="${i}" ${(e?+e.k:0)===i?'selected':''}>${KN[i]}</option>`).join('')}</select>
+ <label>Colore</label><select name="k">${[0,...COLOR_OPTIONS,...(+e?.k===2?[2]:[])].map(i=>`<option value="${i}" ${(e?+e.k:0)===i?'selected':''}>${KN[i]}${colorLegend[i]?' - '+colorLegend[i]:''}</option>`).join('')}</select>
  <div class="row" style="margin-top:12px"><button class="p">${e?'Salva modifiche':'Aggiungi'}</button>${e?'<button type="button" data-a="ce">Annulla</button>':''}</div>
  <p class="mu" style="margin:10px 0 0">Per dettare: tocca il microfono sulla tastiera del telefono. In auto, registra con l’app Memo vocali o Registratore (trascrive da sola) e incolla qui il testo.</p></form>`}
 function entryColors(id,k){
